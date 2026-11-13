@@ -200,4 +200,4 @@ scripts/              vendor 脚本
 
 ## License
 
-本仓库新写的代码（`quickjs/`、`cmd/`、`scripts/`、`examples/`、`targets/`、补丁）还没有选定许可证，待仓库所有者决定。`third_party/quickjs-engine/` 保持上游各自的许可证：QuickJS（MIT，`LICENSE`）、liustack/quickjs（MIT，`UPSTREAM-LICENSE-MIT`）、musl（MIT，`libc/COPYRIGHT`）、TLSF 等，详见 `third_party/quickjs-engine/UPSTREAM-NOTICE.md`。
+本仓库新写的代码（`quickjs/`、`cmd/`、`scripts/`、`examples/`、`targets/`、补丁）采用 MIT 许可证（见 `LICENSE`），与上游 liustack/quickjs、QuickJS、musl 一致。`third_party/quickjs-engine/` 保持上游各自的许可证：QuickJS（MIT，`LICENSE`）、liustack/quickjs（MIT，`UPSTREAM-LICENSE-MIT`）、musl（MIT，`libc/COPYRIGHT`）、TLSF 等，详见 `third_party/quickjs-engine/UPSTREAM-NOTICE.md`。
