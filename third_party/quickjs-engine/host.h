@@ -1,0 +1,65 @@
+/*
+ * Copyright (c) 2026 The liustack/quickjs Authors.
+ * SPDX-License-Identifier: MIT
+ * Use of this source code is governed by the MIT license in LICENSE-MIT at the
+ * root of this repository.
+ */
+#ifndef QUICKJS_HOST_H
+#define QUICKJS_HOST_H
+
+#include <stdint.h>
+
+#include "quickjs.h"
+
+/* What the engine asks of its host. The engine has no other way out: no system
+   calls, no libc beyond engine/libc. The native test host in engine/test
+   implements these, and the Go host implements them for the generated
+   assembly. */
+
+/* The kinds of time host_now gives. */
+enum {
+    HOST_NOW_WALL = 0,      /* nanoseconds since 1970-01-01T00:00:00Z, on the clock set for the VM */
+    HOST_NOW_MONOTONIC = 1, /* nanoseconds from any fixed start, never going back */
+};
+
+/* vm names the VM whose clock is read. It is 0 until JS_NewRuntime takes a VM. */
+int64_t host_now(uint32_t vm, int kind);
+
+/* Calls a function of the host: one it registered, a Builtin, or Intl and
+   Temporal. magic says which, and is 0 or more for those. The result is the
+   value of the call or JS_EXCEPTION. A magic below 0 is a request of the
+   engine itself, and the host decides what to do with it.
+
+   this_val points at the this value, in the memory of the engine. A request of
+   the engine has none and passes NULL. It is a pointer because the generated
+   code passes a callback its arguments in registers, and a JSValue takes two:
+   with the shadow pointer, vm, argc, argv and magic that would be 7, past the
+   6 that the body calling mode has (see internal/goasm/gen/README.md). */
+enum {
+    HOST_CALL_ABORT = -1, /* the engine met a state it cannot go on from. It does not return */
+    /* This one gives the memory of the heap back (engine/heap.h): a chunk that
+       holds a single block (a dedicated chunk), as soon as its block is freed
+       or has moved. It runs no user code and does not call back into the engine.
+       Its arguments are words, a pointer or a size in the u.ptr of the value
+       (HOST_WORD). The address and the size are exactly those of the chunk
+       the host has: the one host_memory_grow gave, or the last remap. */
+    HOST_CALL_MEMORY_RELEASE = -2, /* (address, size): unmap the chunk. It is already out of the heap, and the result is not read */
+    /* The host tells the engine once, with JS_SetHostRemap right after
+       JS_NewRuntime, that it can remap a chunk. Only then does the engine
+       ask for this, so the host never has to say it cannot. Linux: mremap with
+       MREMAP_MAYMOVE. */
+    HOST_CALL_MEMORY_REMAP = -3,   /* (address, old size, new size): make the dedicated chunk new size bytes (a multiple of 64 KiB, bigger), where it is or elsewhere, with its content. The result is the address of the chunk as a word, or 0 when the system has no memory, and then the chunk is as it was: the engine takes that as out of memory and does not try to copy */
+};
+JSValue host_call(uint32_t vm, const JSValue *this_val, int argc, JSValueConst *argv, int magic);
+
+/* The engine dropped the last reference to an object that holds the handle
+   of the host: the host lets go of what the handle names. It runs no user
+   code and does not call back into the engine. */
+void host_release(uint32_t vm, uint32_t handle);
+
+/* A pointer-sized integer as an argument or a result of the kinds above. The
+   tag is JS_TAG_INT and means nothing: the host reads the word. */
+#define HOST_WORD(x) JS_MKPTR(JS_TAG_INT, (void *)(uintptr_t)(x))
+#define HOST_WORD_VALUE(v) ((uintptr_t)JS_VALUE_GET_PTR(v))
+
+#endif

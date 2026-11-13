@@ -1,0 +1,57 @@
+diff -ru a/heap.h b/heap.h
+--- a/heap.h
++++ b/heap.h
+@@ -30,7 +30,12 @@
+ } JSMemRange;
+ 
+ /* The largest request the heap serves: TLSF's. */
++#if SIZE_MAX > 0xffffffffu
+ #define JS_HEAP_MAX_REQUEST ((((size_t)1) << 32) - 8)
++#else
++/* slowjs-tinygo-wasm: a 32-bit size_t (wasm32) cannot hold 1 << 32 */
++#define JS_HEAP_MAX_REQUEST ((size_t)0x7ffffff8)
++#endif
+ 
+ /* The largest request a new shared chunk of chunk bytes takes: a larger one
+    gets a dedicated chunk. It is the test of heap_grow_block (need + need / 32
+diff -ru a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -3565,7 +3565,7 @@
+     if (on)
+         js_measure_call_frame(ctx);
+     else {
+-        rt->call_frame = (long)1 << 60; /* never room for it */
++        rt->call_frame = (long)((unsigned long)-1 >> 2); /* never room for it (slowjs-tinygo-wasm: (long)1 << 60 overflows a 32-bit long) */
+         rt->c_hop_debt = -1;
+     }
+     return 0;
+diff -ru a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -62,7 +62,9 @@
+ #define JS_PTR64_DEF(a)
+ #endif
+ 
+-#ifndef JS_PTR64
++/* slowjs-tinygo-wasm: JS_NO_NAN_BOXING keeps the 16-byte struct JSValue on a
++   32-bit target (wasm32), which the register VM needs (regvm.h). */
++#if !defined(JS_PTR64) && !defined(JS_NO_NAN_BOXING)
+ #define JS_NAN_BOXING
+ #endif
+ 
+diff -ru a/regvm.h b/regvm.h
+--- a/regvm.h
++++ b/regvm.h
+@@ -125,6 +125,11 @@
+                              the slow entry of a call (rv_enter_args) and a
+                              construct in the loop (rv_new_frame) only */
+     JSVarRef **var_refs;  /* the closure variables of func */
++#if !defined(JS_PTR64)
++    /* slowjs-tinygo-wasm: on wasm32 the five pointers take 4 bytes each, so
++       the header is padded to the three slots it has on 64-bit targets */
++    uint8_t pad32[3 * 16 - 5 * sizeof(void *) - 2 * sizeof(int32_t)];
++#endif
+ } RVHeader;
+ 
+ _Static_assert(sizeof(RVHeader) == RV_HDR * sizeof(JSValue),

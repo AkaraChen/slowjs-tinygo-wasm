@@ -1,0 +1,5 @@
+{
+	"inherits": ["wasip1"],
+	"scheduler": "none",
+	"ldflags": ["-zstack-size=4194304"]
+}

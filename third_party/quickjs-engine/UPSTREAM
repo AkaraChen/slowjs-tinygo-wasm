@@ -1,0 +1,5 @@
+repository: https://github.com/liustack/quickjs
+tag:        v0.30.2
+commit:     566d97c97a2fe7db6a3ddd347b742db9b91edeb7
+path:       engine/ (C sources and headers, libc headers only)
+patches:    patches/0001-wasm32-engine.patch 
